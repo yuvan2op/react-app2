@@ -1,8 +1,9 @@
-version: "3.9"
-
 services:
   frontend:
-    image: yuvan2op/react-app2:latest
+    image: react-app2:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: react2_container
     restart: always
 
