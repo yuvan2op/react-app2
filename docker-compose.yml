@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  frontend:
+    image: yuvan2op/new-r-repo:latest
+    container_name: react_frontend
+    restart: always
+
+    ports:
+      - "3000:80"
+
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    driver: bridge
