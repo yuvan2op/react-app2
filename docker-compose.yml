@@ -3,7 +3,7 @@ services:
     image: react-app2:latest
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: client/Dockerfile
     container_name: react2_container
     restart: always
 
@@ -12,7 +12,15 @@ services:
 
     networks:
       - app_net
-
+  backend:
+    image: react-app2-api:latest
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: react2_api_container
+    restart: always
+    ports:
+      - "5000:5000"
 networks:
   app_net:
     driver: bridge
