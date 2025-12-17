@@ -21,6 +21,24 @@ services:
     restart: always
     ports:
       - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/react_app2_practice
+    depends_on:
+      - mongo
+    networks:
+      - app_net
+  mongo:
+    image: mongo:6
+    container_name: react2_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app_net
 networks:
   app_net:
     driver: bridge
+volumes:
+  mongo_data:
