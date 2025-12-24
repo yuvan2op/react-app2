@@ -1,26 +1,42 @@
 services:
+
   frontend:
     image: react-app2:latest
     build:
-      context: .
-      dockerfile: client/Dockerfile
-    container_name: react2_container
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: client_container
     restart: always
-
     ports:
-      - "3000:80"
-
+      - "80:80"
     networks:
       - app_net
+
+
   backend:
     image: react-app2-api:latest
     build:
       context: ./api
       dockerfile: Dockerfile
-    container_name: react2_api_container
+    container_name: backend1_container
     restart: always
     ports:
       - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/react_app2_practice
+    depends_on:
+      - mongo
+    networks:
+      - app_net
+  backend2:
+    image: react-app2-api:latest
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: backend2_container
+    restart: always
+    ports:
+      - "5001:5000"
     environment:
       - MONGODB_URI=mongodb://mongo:27017/react_app2_practice
     depends_on:

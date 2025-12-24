@@ -1,26 +1,28 @@
-# ---------- Build stage ----------
+# Build stage
 FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy client package definitions and install dependencies
-COPY client/package.json client/package-lock.json* ./client/
-WORKDIR /app/client
+# Copy package files and install
+COPY package.json package-lock.json* ./
 RUN npm install
 
-# Copy client source code and build
-COPY client ./ 
+# Copy source and build
+COPY . .
 RUN npm run build
 
-# ---------- Runtime stage ----------
+# Runtime stage
 FROM nginx:alpine
 
-# Remove default nginx config
+# Remove default config
 RUN rm /etc/nginx/conf.d/default.conf
+
+# Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy build output from client
-COPY --from=build /app/client/build /usr/share/nginx/html
+# Copy built app
+COPY --from=build /app/build /usr/share/nginx/html
 
 EXPOSE 80
+
 CMD ["nginx", "-g", "daemon off;"]

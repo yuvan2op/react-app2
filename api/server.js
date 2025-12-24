@@ -8,13 +8,17 @@ const PORT = process.env.PORT || 5000;
 // Connect to MongoDB
 connectDB();
 
+let visits = 0;
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 // Basic routes
 app.get('/', (req, res) => {
+  visits++;
   res.send(
+    `Visits: ${visits}\n\n` +
     'Hey there! Try /health, /api/hello, /api/echo, /api/items (GET/POST). MongoDB is wired in for practice.'
   );
 });
