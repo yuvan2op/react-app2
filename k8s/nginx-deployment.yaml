@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend-deployment
+  name: nginx-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: frontend
+      app: nginx
   template:
     metadata:
       labels:
-        app: frontend
+        app: nginx
     spec:
       containers:
-      - name: frontend
+      - name: nginx
         image: yuvan2op/react2-client:v1
         ports:
         - containerPort: 80
