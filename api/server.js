@@ -27,6 +27,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
+// API-style health endpoint for use via nginx proxy (/api/health)
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime(), path: '/api/health' });
+});
+
 app.get('/api/hello', (req, res) => {
   res.json({ message: 'Hello from the Node.js backend 👋' });
 });
