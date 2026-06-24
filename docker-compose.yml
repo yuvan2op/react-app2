@@ -1,11 +1,11 @@
 services:
 
   frontend:
-    image: react-app2:latest
+    image: react-app2-client:latest
     build:
       context: ./client
       dockerfile: Dockerfile
-    container_name: client_container
+    container_name: react-app2-client
     volumes:
       # Mount custom nginx config to the same path used in the image
       - ./client/nginx.conf:/etc/nginx/conf.d/default.conf
@@ -21,7 +21,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    container_name: backend1_container
+    container_name: react-app2-api
     restart: always
     ports:
       - "5000:5000"
@@ -36,7 +36,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    container_name: backend2_container
+    container_name: react-app2-api-2
     restart: always
     ports:
       - "5001:5000"
@@ -48,7 +48,7 @@ services:
       - app_net
   mongo:
     image: mongo:6
-    container_name: react2_mongo
+    container_name: react-app2-mongo
     restart: always
     volumes:
       - mongo_data:/data/db
