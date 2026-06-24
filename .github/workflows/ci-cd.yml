@@ -6,46 +6,129 @@ on:
       - main
   pull_request:
 
-jobs:
-  build-test:
-    runs-on: ubuntu-latest
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
 
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [client, api]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # If your project is Node.js (React/Node backend)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        working-directory: ${{ matrix.app }}
+        run: npm ci
 
       - name: Run tests
-        run: npm test --if-present -- --watch=false
+        if: matrix.app == 'client'
+        working-directory: client
+        run: npm test -- --watchAll=false --passWithNoTests
 
       - name: Build
-        run: npm run build --if-present
+        if: matrix.app == 'client'
+        working-directory: client
+        run: npm run build
 
-  docker-build-push:
-    needs: build-test
+  docker:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        include:
+          - app: client
+            context: ./client
+            image: react-app2-client
+          - app: api
+            context: ./api
+            image: react-app2-api
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Login to DockerHub
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/react-app2:latest .
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Push Docker image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/react-app2:latest
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare EC2 app directory
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: mkdir -p ~/react-app2
+
+      - name: Copy compose file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: docker-compose.prod.yml
+          target: ~/react-app2
+
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN,MONGODB_URI
+          script: |
+            set -e
+            cd ~/react-app2
+            MONGO_URI="${MONGODB_URI:-mongodb://mongo:27017/react_app2_practice}"
+            if [[ ! -f .env ]]; then
+              printf 'DOCKERHUB_USERNAME=%s\nIMAGE_TAG=latest\nMONGODB_URI=%s\n' "$DOCKERHUB_USERNAME" "$MONGO_URI" > .env
+            else
+              grep -q '^DOCKERHUB_USERNAME=' .env && sed -i "s|^DOCKERHUB_USERNAME=.*|DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}|" .env || echo "DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME}" >> .env
+              grep -q '^IMAGE_TAG=' .env && sed -i 's|^IMAGE_TAG=.*|IMAGE_TAG=latest|' .env || echo 'IMAGE_TAG=latest' >> .env
+              if [[ -n "${MONGODB_URI:-}" ]]; then
+                grep -q '^MONGODB_URI=' .env && sed -i "s|^MONGODB_URI=.*|MONGODB_URI=${MONGODB_URI}|" .env || echo "MONGODB_URI=${MONGODB_URI}" >> .env
+              fi
+            fi
+            echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f

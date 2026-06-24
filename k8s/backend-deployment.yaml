@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: yuvan2op/react2api:v1
+          image: yuvan2op/react-app2-api:v1
           ports:
             - containerPort: 5000
           env:

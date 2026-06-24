@@ -1,0 +1,38 @@
+services:
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/react-app2-client:${IMAGE_TAG:-latest}
+    container_name: react-app2-client
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app_net
+
+  backend:
+    image: ${DOCKERHUB_USERNAME}/react-app2-api:${IMAGE_TAG:-latest}
+    container_name: react-app2-api
+    restart: always
+    environment:
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongo:27017/react_app2_practice}
+    depends_on:
+      - mongo
+    networks:
+      - app_net
+
+  mongo:
+    image: mongo:6
+    container_name: react-app2-mongo
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    driver: bridge
+
+volumes:
+  mongo_data:

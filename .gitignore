@@ -1,3 +1,5 @@
 minikube-linux-amd64
-minikube-linux-amd64
-minikube-linux-amd64
+*.pem
+.env
+.env.local
+.env.prod
