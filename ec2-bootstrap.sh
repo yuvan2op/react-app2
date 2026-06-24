@@ -5,7 +5,7 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/home/ubuntu/react-app2}"
 echo "Installing Docker..."
 sudo apt-get update
-sudo apt-get install -y docker.io docker-compose-plugin
+sudo apt-get install -y docker.io docker-compose-plugin docker-compose
 sudo usermod -aG docker "$USER"
 echo "Creating app directory at ${APP_DIR}..."
 mkdir -p "${APP_DIR}"

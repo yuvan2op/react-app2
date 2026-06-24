@@ -129,6 +129,14 @@ jobs:
               fi
             fi
             echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            if docker compose version >/dev/null 2>&1; then
+              COMPOSE="docker compose"
+            elif command -v docker-compose >/dev/null 2>&1; then
+              COMPOSE="docker-compose"
+            else
+              echo "Docker Compose not found. On EC2 run: sudo apt install -y docker-compose-plugin" >&2
+              exit 1
+            fi
+            $COMPOSE -f docker-compose.prod.yml pull
+            $COMPOSE -f docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f
