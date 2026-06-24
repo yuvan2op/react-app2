@@ -134,7 +134,7 @@ jobs:
             elif command -v docker-compose >/dev/null 2>&1; then
               COMPOSE="docker-compose"
             else
-              echo "Docker Compose not found. On EC2 run: sudo apt install -y docker-compose-plugin" >&2
+              echo "Docker Compose not found. On Amazon Linux 2023 run: sudo dnf install -y docker && install compose plugin (see ec2-bootstrap.sh)" >&2
               exit 1
             fi
             $COMPOSE -f docker-compose.prod.yml pull
